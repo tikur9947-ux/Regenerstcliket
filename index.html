@@ -1,0 +1,2615 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Anatoly Coin</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --main-gold: #f39c12;
+            --dark-bg: #0a0a0a;
+            --panel-bg: #1c1c1c;
+            --bronze: #cd7f32;
+            --silver: #c0c0c0;
+            --gold: #ffd700;
+        }
+
+        body {
+            background-color: var(--dark-bg);
+            color: white;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        #app {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+        }
+
+        .screen {
+            flex: 1;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .active { display: flex; }
+
+        .score-container {
+            text-align: center;
+            margin-top: 40px;
+            position: relative;
+        }
+
+        .currency-label {
+            color: #888;
+            font-size: 18px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.3s;
+            padding: 10px 20px;
+            border-radius: 10px;
+        }
+
+        .currency-label:hover {
+            color: var(--main-gold);
+            background: rgba(243, 156, 18, 0.1);
+        }
+
+        .balance-value {
+            font-size: 48px;
+            font-weight: bold;
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .coin-wrapper {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            margin: 20px 0;
+        }
+
+        .main-coin {
+            width: 260px;
+            height: 260px;
+            background: radial-gradient(circle, var(--main-gold), #d35400);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 120px;
+            font-weight: bold;
+            border: 10px solid #e67e22;
+            box-shadow: 0 0 40px rgba(243, 156, 18, 0.4);
+            cursor: pointer;
+            transition: transform 0.05s;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .main-coin:active {
+            transform: scale(0.92);
+        }
+
+        .coin-effect {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .energy-section {
+            width: 100%;
+            max-width: 300px;
+            margin-bottom: 20px;
+        }
+
+        .energy-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        .energy-bar {
+            width: 100%;
+            height: 12px;
+            background: #333;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        #energy-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #f1c40f, #f39c12);
+            width: 100%;
+            transition: width 0.2s;
+        }
+
+        .menu-list {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .menu-item {
+            background: var(--panel-bg);
+            padding: 15px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .menu-item:active { 
+            opacity: 0.8; 
+            transform: scale(0.98);
+        }
+        
+        .menu-item:hover {
+            border-color: var(--main-gold);
+        }
+        
+        .item-info h4 { margin: 0; font-size: 16px; }
+        .item-info p { margin: 5px 0 0; color: #aaa; font-size: 13px; }
+        .price { color: var(--main-gold); font-weight: bold; }
+
+        .nav-bar {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            background: rgba(28, 28, 28, 0.95);
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-around;
+            padding: 12px;
+            border-radius: 20px;
+            border: 1px solid #333;
+        }
+
+        .nav-btn {
+            background: none;
+            border: none;
+            color: #666;
+            font-size: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+            padding: 8px 15px;
+            border-radius: 10px;
+            transition: all 0.2s;
+        }
+
+        .nav-btn.active-nav { 
+            color: white; 
+            background: rgba(243, 156, 18, 0.2);
+        }
+        
+        .nav-btn:active {
+            transform: scale(0.95);
+        }
+
+        .tap-number {
+            position: absolute;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            pointer-events: none;
+            animation: floatUp 0.8s ease-out forwards;
+            z-index: 100;
+        }
+
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-120px); }
+        }
+        
+        .save-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(46, 204, 113, 0.9);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 10px;
+            font-size: 14px;
+            z-index: 1000;
+            animation: slideIn 0.3s ease, fadeOut 0.3s ease 1.7s forwards;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes fadeOut {
+            to { opacity: 0; }
+        }
+        
+        /* Стили для раздела Топы */
+        .leaderboard {
+            width: 100%;
+            max-width: 400px;
+            margin-top: 20px;
+        }
+        
+        .leaderboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .refresh-btn {
+            background: var(--main-gold);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        
+        .leaderboard-item {
+            display: flex;
+            align-items: center;
+            background: var(--panel-bg);
+            padding: 12px 15px;
+            border-radius: 10px;
+            margin-bottom: 8px;
+            transition: transform 0.2s;
+        }
+        
+        .leaderboard-item:hover {
+            transform: translateX(5px);
+        }
+        
+        .rank {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-weight: bold;
+            margin-right: 15px;
+        }
+        
+        .rank-1 { background: var(--gold); color: #000; }
+        .rank-2 { background: var(--silver); color: #000; }
+        .rank-3 { background: var(--bronze); color: #000; }
+        .rank-other { background: #333; color: white; }
+        
+        .player-info {
+            flex: 1;
+        }
+        
+        .player-name {
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .player-score {
+            color: var(--main-gold);
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        .player-avatar {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        
+        .referral-section {
+            background: linear-gradient(45deg, #1a2980, #26d0ce);
+            padding: 15px;
+            border-radius: 12px;
+            margin-top: 20px;
+            width: 100%;
+            max-width: 400px;
+        }
+        
+        .referral-code {
+            background: rgba(255,255,255,0.1);
+            padding: 10px;
+            border-radius: 8px;
+            font-family: monospace;
+            text-align: center;
+            margin: 10px 0;
+            cursor: pointer;
+            word-break: break-all;
+        }
+        
+        .referral-code:active {
+            background: rgba(255,255,255,0.2);
+        }
+        
+        .daily-reward {
+            background: linear-gradient(45deg, #f46b45, #eea849);
+            padding: 15px;
+            border-radius: 12px;
+            margin-top: 15px;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        
+        .reward-btn {
+            background: white;
+            color: #f46b45;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-weight: bold;
+            font-size: 16px;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+        
+        .reward-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .reward-timer {
+            font-size: 12px;
+            color: rgba(255,255,255,0.8);
+            margin-top: 8px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            width: 100%;
+            max-width: 400px;
+            margin-top: 20px;
+        }
+        
+        .stat-card {
+            background: var(--panel-bg);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--main-gold);
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #888;
+            margin-top: 5px;
+        }
+        
+        /* Стили для админ-панели */
+        .admin-panel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--panel-bg);
+            border: 2px solid var(--main-gold);
+            border-radius: 15px;
+            padding: 25px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 0 30px rgba(243, 156, 18, 0.3);
+            display: none;
+        }
+        
+        .admin-panel.active {
+            display: block;
+        }
+        
+        .admin-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 999;
+            display: none;
+        }
+        
+        .admin-overlay.active {
+            display: block;
+        }
+        
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .admin-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        
+        .admin-input-group {
+            margin-bottom: 15px;
+        }
+        
+        .admin-input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #444;
+            background: #2a2a2a;
+            color: white;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        
+        .admin-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(45deg, #27ae60, #2ecc71);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        
+        .admin-btn:hover {
+            background: linear-gradient(45deg, #229954, #27ae60);
+        }
+        
+        .admin-btns-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .admin-btn-small {
+            padding: 10px;
+            background: var(--main-gold);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        .admin-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #e74c3c;
+            color: white;
+            font-size: 10px;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+        
+        /* Стили для кода активации */
+        .code-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--panel-bg);
+            border: 2px solid #3498db;
+            border-radius: 15px;
+            padding: 25px;
+            width: 90%;
+            max-width: 350px;
+            z-index: 1001;
+            box-shadow: 0 0 30px rgba(52, 152, 219, 0.3);
+            display: none;
+        }
+        
+        .code-modal.active {
+            display: block;
+        }
+        
+        .code-input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 2px solid #3498db;
+            background: #2a2a2a;
+            color: white;
+            font-size: 18px;
+            text-align: center;
+            letter-spacing: 2px;
+            margin: 20px 0;
+        }
+        
+        .code-submit {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        /* Кнопка быстрого доступа к админке */
+        .quick-admin-btn {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 100;
+            box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
+        }
+        
+        .quick-admin-btn:active {
+            transform: scale(0.95);
+        }
+        
+        /* Стили для магазина скинов */
+        .skins-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            width: 100%;
+            max-width: 400px;
+            margin-top: 20px;
+        }
+        
+        .skin-card {
+            background: var(--panel-bg);
+            border-radius: 15px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 3px solid transparent;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .skin-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .skin-card.equipped {
+            border-color: var(--main-gold);
+            box-shadow: 0 0 20px rgba(243, 156, 18, 0.3);
+        }
+        
+        .skin-card.locked {
+            opacity: 0.6;
+            filter: grayscale(0.8);
+        }
+        
+        .skin-card.locked:before {
+            content: '🔒';
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 20px;
+            z-index: 2;
+        }
+        
+        .skin-preview {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 10px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .skin-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 16px;
+        }
+        
+        .skin-price {
+            color: var(--main-gold);
+            font-weight: bold;
+            font-size: 18px;
+        }
+        
+        .skin-owned {
+            color: #2ecc71;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .skin-bonus {
+            font-size: 12px;
+            color: #888;
+            margin-top: 5px;
+        }
+        
+        /* Эффекты для скинов */
+        .skin-effect-glow {
+            animation: glow 2s infinite alternate;
+        }
+        
+        .skin-effect-rotate {
+            animation: rotate 10s infinite linear;
+        }
+        
+        .skin-effect-pulse {
+            animation: pulse 1.5s infinite;
+        }
+        
+        .skin-effect-rainbow {
+            background: linear-gradient(45deg, 
+                #ff0000, #ff9900, #ffff00, 
+                #00ff00, #0099ff, #6633ff);
+            background-size: 400% 400%;
+            animation: rainbow 3s infinite linear;
+        }
+        
+        @keyframes glow {
+            from { box-shadow: 0 0 20px rgba(243, 156, 18, 0.5); }
+            to { box-shadow: 0 0 40px rgba(243, 156, 18, 0.8); }
+        }
+        
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        @keyframes rainbow {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 100% 50%; }
+        }
+        
+        /* Стили для табов */
+        .shop-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 400px;
+        }
+        
+        .shop-tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            background: var(--panel-bg);
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        
+        .shop-tab.active {
+            background: var(--main-gold);
+            color: white;
+        }
+        
+        .skin-info-panel {
+            background: var(--panel-bg);
+            padding: 15px;
+            border-radius: 12px;
+            margin-top: 20px;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        
+        /* Стили для админ-панели игроков */
+        .admin-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            width: 100%;
+        }
+        
+        .admin-tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            background: var(--panel-bg);
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        
+        .admin-tab.active {
+            background: var(--main-gold);
+            color: white;
+        }
+        
+        .players-list {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            border: 1px solid #444;
+            border-radius: 10px;
+            padding: 10px;
+        }
+        
+        .player-admin-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: #2a2a2a;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+        
+        .player-admin-info {
+            flex: 1;
+        }
+        
+        .player-admin-name {
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .player-admin-balance {
+            color: var(--main-gold);
+            font-size: 12px;
+        }
+        
+        .player-admin-actions {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .admin-action-btn {
+            padding: 5px 10px;
+            background: var(--main-gold);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        
+        .skin-admin-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+        
+        .skin-admin-card {
+            background: var(--panel-bg);
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+        }
+        
+        .skin-admin-preview {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 5px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #444;
+            background: #2a2a2a;
+            color: white;
+            margin-bottom: 15px;
+        }
+        
+        .stats-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 12px;
+        }
+        
+        .stats-label {
+            color: #888;
+        }
+        
+        .stats-value {
+            color: var(--main-gold);
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Кнопка быстрого доступа к админке -->
+<button class="quick-admin-btn" onclick="showAdminCodeModal()">ADMIN</button>
+
+<div id="app">
+    <div id="main-screen" class="screen active">
+        <div class="score-container">
+            <div class="currency-label" onclick="showAdminCodeModal()">ВАЛЮТА АНАТОЛИЙ</div>
+            <div class="balance-value" id="balance">0</div>
+        </div>
+
+        <div class="coin-wrapper">
+            <div class="main-coin" id="coin" onclick="handleCoinClick(event)">
+                <div id="coin-effect" class="coin-effect"></div>
+                <span id="coin-letter">А</span>
+            </div>
+        </div>
+
+        <div class="energy-section">
+            <div class="energy-info">
+                <span>⚡ Энергия</span>
+                <span id="energy-text">1000 / 1000</span>
+            </div>
+            <div class="energy-bar">
+                <div id="energy-fill"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="boosts-screen" class="screen">
+        <h2>Магазин Бустов</h2>
+        <div class="shop-tabs">
+            <div class="shop-tab active" onclick="showShopTab('boosts')">🚀 Бусты</div>
+            <div class="shop-tab" onclick="showShopTab('skins')">🎨 Скины</div>
+        </div>
+        
+        <div id="boosts-tab" class="shop-tab-content">
+            <div class="menu-list">
+                <div class="menu-item" onclick="buyMultitap()">
+                    <div class="item-info">
+                        <h4>Multitap</h4>
+                        <p>+1 к клику</p>
+                    </div>
+                    <div class="price" id="multitap-price">100</div>
+                </div>
+                <div class="menu-item" onclick="buyEnergyLimit()">
+                    <div class="item-info">
+                        <h4>Energy Limit</h4>
+                        <p>+500 к макс. энергии</p>
+                    </div>
+                    <div class="price" id="energy-price">500</div>
+                </div>
+                <div class="menu-item" onclick="buyAutoClicker()">
+                    <div class="item-info">
+                        <h4>Auto Clicker</h4>
+                        <p>Авто-клик 1/сек</p>
+                    </div>
+                    <div class="price" id="autoclicker-price">2000</div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="skins-tab" class="shop-tab-content" style="display: none;">
+            <div class="skin-info-panel">
+                <p>Текущий скин: <span id="current-skin-name">Классический</span></p>
+                <p>Бонус: <span id="current-skin-bonus">+0% к доходу</span></p>
+            </div>
+            <div class="skins-grid" id="skins-grid">
+                <!-- Скины будут загружены через JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <div id="tasks-screen" class="screen">
+        <h2>Задания</h2>
+        <div class="menu-list">
+            <div class="menu-item" onclick="completeTask(1000, this, 'https://t.me/podilcliker')">
+                <div class="item-info">
+                    <h4>Подписка на Podil Cliker</h4>
+                    <p>Вступи в группу и получи бонус</p>
+                </div>
+                <div class="price">+1000 Анатолий</div>
+            </div>
+            <div class="menu-item" onclick="completeTask(500, this)">
+                <div class="item-info">
+                    <h4>100 тапов за день</h4>
+                    <p id="taps-progress">Прогресс: 0/100</p>
+                </div>
+                <div class="price">+500 Анатолий</div>
+            </div>
+            <div class="menu-item" onclick="completeTask(2000, this)">
+                <div class="item-info">
+                    <h4>Пригласи друга</h4>
+                    <p>Друг получит бонус 1000 монет</p>
+                </div>
+                <div class="price">+2000 Анатолий</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="top-screen" class="screen">
+        <h2>🏆 Топ Игроков</h2>
+        
+        <div class="leaderboard">
+            <div class="leaderboard-header">
+                <h3 style="margin: 0;">Глобальный рейтинг</h3>
+                <button class="refresh-btn" onclick="loadRealLeaderboard()">🔄 Обновить</button>
+            </div>
+            
+            <div id="leaderboard-list">
+                <div style="text-align: center; padding: 20px; color: #888;">
+                    Загрузка реального топа игроков...
+                </div>
+            </div>
+        </div>
+        
+        <div class="referral-section">
+            <h4 style="margin: 0 0 10px 0;">👥 Реферальная система</h4>
+            <p style="font-size: 12px; margin: 0 0 10px 0;">Пригласи друга по ссылке и получай 10% от его дохода!</p>
+            <div class="referral-code" onclick="copyReferralCode()" id="referral-code">
+                Загрузка...
+            </div>
+            <p style="font-size: 11px; color: rgba(255,255,255,0.7); margin: 5px 0 0 0;">
+                Приглашено друзей: <span id="referral-count">0</span>
+            </p>
+        </div>
+        
+        <div class="daily-reward">
+            <h4 style="margin: 0 0 10px 0;">🎁 Ежедневная награда</h4>
+            <p style="font-size: 14px; margin: 0 0 10px 0;">Зайди завтра и получи бонус!</p>
+            <button class="reward-btn" onclick="claimDailyReward()" id="daily-reward-btn">
+                Забрать награду
+            </button>
+            <div class="reward-timer" id="reward-timer"></div>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="total-taps">0</div>
+                <div class="stat-label">Всего тапов</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="total-boosts">0</div>
+                <div class="stat-label">Куплено бустов</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="session-earned">0</div>
+                <div class="stat-label">Заработано за сессию</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="player-rank">#-</div>
+                <div class="stat-label">Ваш ранг</div>
+            </div>
+        </div>
+    </div>
+
+    <nav class="nav-bar">
+        <div class="nav-btn active-nav" onclick="showScreen('main-screen', this)">
+            <span>🔘</span><span>Тап</span>
+        </div>
+        <div class="nav-btn" onclick="showScreen('tasks-screen', this)">
+            <span>📋</span><span>Задания</span>
+        </div>
+        <div class="nav-btn" onclick="showScreen('boosts-screen', this)">
+            <span>🚀</span><span>Бусты</span>
+        </div>
+        <div class="nav-btn" onclick="showScreen('top-screen', this)">
+            <span>🏆</span><span>Топы</span>
+        </div>
+    </nav>
+</div>
+
+<!-- Оверлей для модальных окон -->
+<div class="admin-overlay" id="adminOverlay" onclick="closeAdminPanel()"></div>
+
+<!-- Модальное окно для ввода кода админа -->
+<div class="code-modal" id="codeModal">
+    <h2 style="text-align: center; margin: 0 0 15px 0;">🔐 Активация админ-панели</h2>
+    <p style="text-align: center; color: #aaa; font-size: 14px; margin-bottom: 10px;">
+        Введите код администратора для доступа к панели управления
+    </p>
+    <input type="text" class="code-input" id="adminCodeInput" placeholder="Введите код..." maxlength="20">
+    <button class="code-submit" onclick="checkAdminCode()">Подтвердить</button>
+</div>
+
+<!-- Панель администратора -->
+<div class="admin-panel" id="adminPanel">
+    <div class="admin-header">
+        <h2 style="margin: 0;">⚙️ Панель Администратора</h2>
+        <button class="admin-close" onclick="closeAdminPanel()">×</button>
+    </div>
+    
+    <div class="admin-tabs">
+        <div class="admin-tab active" onclick="showAdminTab('main')">Основное</div>
+        <div class="admin-tab" onclick="showAdminTab('players')">Игроки</div>
+        <div class="admin-tab" onclick="showAdminTab('skins')">Скины</div>
+    </div>
+    
+    <!-- Основная вкладка -->
+    <div id="admin-tab-main" class="admin-tab-content">
+        <div class="admin-input-group">
+            <input type="number" class="admin-input" id="adminCoinsAmount" placeholder="Количество монет">
+            <button class="admin-btn" onclick="addAdminCoins()">Добавить монеты</button>
+        </div>
+        
+        <div class="admin-btns-grid">
+            <button class="admin-btn-small" onclick="addCoins(1000)">+1,000</button>
+            <button class="admin-btn-small" onclick="addCoins(10000)">+10,000</button>
+            <button class="admin-btn-small" onclick="addCoins(100000)">+100,000</button>
+            <button class="admin-btn-small" onclick="addCoins(1000000)">+1,000,000</button>
+        </div>
+        
+        <div style="margin-top: 20px; border-top: 1px solid #444; padding-top: 15px;">
+            <button class="admin-btn" onclick="resetEnergy()" style="background: linear-gradient(45deg, #3498db, #2980b9);">
+                ♻️ Восстановить энергию
+            </button>
+            <button class="admin-btn" onclick="resetGame()" style="background: linear-gradient(45deg, #e74c3c, #c0392b); margin-top: 10px;">
+                🗑️ Сбросить игру
+            </button>
+        </div>
+        
+        <div style="margin-top: 15px; font-size: 12px; color: #888; text-align: center;">
+            Текущий баланс: <span id="currentBalanceAdmin">0</span> монет
+        </div>
+    </div>
+    
+    <!-- Вкладка управления игроками -->
+    <div id="admin-tab-players" class="admin-tab-content" style="display: none;">
+        <input type="text" class="search-input" id="playerSearch" placeholder="Поиск игрока..." onkeyup="searchPlayers()">
+        
+        <div class="players-list" id="players-list">
+            <!-- Список игроков будет загружен здесь -->
+        </div>
+        
+        <div class="admin-input-group">
+            <input type="text" class="admin-input" id="playerIdInput" placeholder="ID игрока">
+            <input type="number" class="admin-input" id="playerCoinsAmount" placeholder="Количество монет">
+            <button class="admin-btn" onclick="giveCoinsToPlayer()">Выдать монеты игроку</button>
+        </div>
+        
+        <div class="stats-row">
+            <div class="stats-label">Всего игроков:</div>
+            <div class="stats-value" id="total-players">0</div>
+        </div>
+        <div class="stats-row">
+            <div class="stats-label">Общий баланс всех игроков:</div>
+            <div class="stats-value" id="total-balance">0</div>
+        </div>
+    </div>
+    
+    <!-- Вкладка управления скинами -->
+    <div id="admin-tab-skins" class="admin-tab-content" style="display: none;">
+        <div class="skin-admin-grid" id="admin-skins-grid">
+            <!-- Скины для админа -->
+        </div>
+        
+        <div class="admin-input-group">
+            <input type="text" class="admin-input" id="skinPlayerId" placeholder="ID игрока">
+            <select class="admin-input" id="skinSelect">
+                <option value="">Выберите скин</option>
+                <!-- Скины будут добавлены через JS -->
+            </select>
+            <button class="admin-btn" onclick="giveSkinToPlayer()">Выдать скин игроку</button>
+        </div>
+        
+        <button class="admin-btn" onclick="unlockAllSkins()" style="background: linear-gradient(45deg, #9b59b6, #8e44ad);">
+            🔓 Разблокировать все скины себе
+        </button>
+    </div>
+</div>
+
+<script>
+// ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
+let gameState = null;
+const tg = window.Telegram.WebApp;
+let allPlayers = {}; // Хранилище всех игроков
+let leaderboardData = []; // Данные для реального топа
+
+// ===== СИСТЕМА СКИНОВ =====
+const skinsData = [
+    {
+        id: 'classic',
+        name: 'Классический',
+        price: 0,
+        bonus: 0,
+        color1: '#f39c12',
+        color2: '#d35400',
+        borderColor: '#e67e22',
+        letter: 'А',
+        effect: 'none',
+        owned: true,
+        equipped: true
+    },
+    {
+        id: 'gold',
+        name: 'Золотой',
+        price: 5000,
+        bonus: 10,
+        color1: '#ffd700',
+        color2: '#ff9900',
+        borderColor: '#ffcc00',
+        letter: '💰',
+        effect: 'glow',
+        owned: false,
+        equipped: false
+    },
+    {
+        id: 'diamond',
+        name: 'Бриллиантовый',
+        price: 15000,
+        bonus: 25,
+        color1: '#00ffff',
+        color2: '#0099cc',
+        borderColor: '#00ccff',
+        letter: '💎',
+        effect: 'pulse',
+        owned: false,
+        equipped: false
+    },
+    {
+        id: 'ruby',
+        name: 'Рубиновый',
+        price: 10000,
+        bonus: 20,
+        color1: '#ff3366',
+        color2: '#cc0033',
+        borderColor: '#ff0066',
+        letter: '❤️',
+        effect: 'pulse',
+        owned: false,
+        equipped: false
+    },
+    {
+        id: 'emerald',
+        name: 'Изумрудный',
+        price: 12000,
+        bonus: 22,
+        color1: '#00ff99',
+        color2: '#009966',
+        borderColor: '#00cc99',
+        letter: '💚',
+        effect: 'glow',
+        owned: false,
+        equipped: false
+    },
+    {
+        id: 'galaxy',
+        name: 'Галактика',
+        price: 25000,
+        bonus: 35,
+        color1: '#6633ff',
+        color2: '#3300cc',
+        borderColor: '#6600ff',
+        letter: '🌌',
+        effect: 'rainbow',
+        owned: false,
+        equipped: false
+    },
+    {
+        id: 'fire',
+        name: 'Огненный',
+        price: 8000,
+        bonus: 18,
+        color1: '#ff3300',
+        color2: '#cc0000',
+        borderColor: '#ff6600',
+        letter: '🔥',
+        effect: 'glow',
+        owned: false,
+        equipped: false
+    },
+    {
+        id: 'ice',
+        name: 'Ледяной',
+        price: 9000,
+        bonus: 19,
+        color1: '#66ffff',
+        color2: '#3399ff',
+        borderColor: '#00ccff',
+        letter: '❄️',
+        effect: 'pulse',
+        owned: false,
+        equipped: false
+    },
+    {
+        id: 'platinum',
+        name: 'Платиновый',
+        price: 30000,
+        bonus: 40,
+        color1: '#e5e5e5',
+        color2: '#999999',
+        borderColor: '#cccccc',
+        letter: '⚪',
+        effect: 'glow',
+        owned: false,
+        equipped: false
+    },
+    {
+        id: 'rainbow',
+        name: 'Радужный',
+        price: 50000,
+        bonus: 50,
+        color1: 'linear-gradient(45deg, #ff0000, #ff9900, #ffff00, #00ff00, #0099ff, #6633ff)',
+        color2: 'linear-gradient(45deg, #cc0000, #cc6600, #cccc00, #00cc00, #0066cc, #3300cc)',
+        borderColor: '#ffffff',
+        letter: '🌈',
+        effect: 'rainbow',
+        owned: false,
+        equipped: false
+    },
+    {
+        id: 'space',
+        name: 'Космический',
+        price: 40000,
+        bonus: 45,
+        color1: '#000033',
+        color2: '#000066',
+        borderColor: '#6600ff',
+        letter: '🚀',
+        effect: 'rotate',
+        owned: false,
+        equipped: false
+    },
+    {
+        id: 'ancient',
+        name: 'Древний',
+        price: 20000,
+        bonus: 30,
+        color1: '#996633',
+        color2: '#663300',
+        borderColor: '#cc6600',
+        letter: '🏺',
+        effect: 'glow',
+        owned: false,
+        equipped: false
+    }
+];
+
+// ===== СИСТЕМА ХРАНЕНИЯ ВСЕХ ИГРОКОВ =====
+const PLAYERS_STORAGE_KEY = 'anatoly_coin_all_players';
+
+function saveAllPlayers() {
+    try {
+        // Сохраняем текущего игрока в общее хранилище
+        if (gameState) {
+            const userId = getUserId();
+            allPlayers[userId] = {
+                id: userId,
+                username: getUserName(),
+                balance: gameState.balance,
+                totalEarned: gameState.totalEarned,
+                totalTaps: gameState.totalTaps,
+                lastActive: Date.now(),
+                skins: gameState.skins,
+                isAdmin: gameState.isAdmin,
+                referralCode: gameState.referralCode,
+                referrals: gameState.referrals
+            };
+        }
+        
+        const playersData = JSON.stringify(allPlayers);
+        localStorage.setItem(PLAYERS_STORAGE_KEY, playersData);
+        return true;
+    } catch (error) {
+        console.error('Ошибка сохранения игроков:', error);
+        return false;
+    }
+}
+
+function loadAllPlayers() {
+    try {
+        const saved = localStorage.getItem(PLAYERS_STORAGE_KEY);
+        if (saved) {
+            allPlayers = JSON.parse(saved);
+            console.log('Загружено игроков:', Object.keys(allPlayers).length);
+        } else {
+            allPlayers = {};
+            console.log('Создано новое хранилище игроков');
+        }
+        
+        // Обновляем данные текущего игрока
+        updateCurrentPlayerData();
+        
+        return true;
+    } catch (error) {
+        console.error('Ошибка загрузки игроков:', error);
+        allPlayers = {};
+        return false;
+    }
+}
+
+function updateCurrentPlayerData() {
+    if (!gameState) return;
+    
+    const userId = getUserId();
+    const username = getUserName();
+    
+    allPlayers[userId] = {
+        id: userId,
+        username: username,
+        balance: gameState.balance,
+        totalEarned: gameState.totalEarned,
+        totalTaps: gameState.totalTaps,
+        lastActive: Date.now(),
+        skins: gameState.skins,
+        isAdmin: gameState.isAdmin,
+        referralCode: gameState.referralCode,
+        referrals: gameState.referrals,
+        version: "1.5"
+    };
+    
+    // Сохраняем изменения
+    saveAllPlayers();
+}
+
+function getUserId() {
+    if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+        return tg.initDataUnsafe.user.id.toString();
+    }
+    return 'guest_' + Math.random().toString(36).substr(2, 9);
+}
+
+function getUserName() {
+    if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+        return tg.initDataUnsafe.user.first_name || 'Игрок';
+    }
+    return 'Гость';
+}
+
+// ===== РЕАЛЬНЫЙ ТОП ИГРОКОВ =====
+function loadRealLeaderboard() {
+    // Загружаем всех игроков
+    loadAllPlayers();
+    
+    // Преобразуем объект игроков в массив для сортировки
+    const playersArray = Object.values(allPlayers);
+    
+    // Фильтруем только активных игроков (были активны в последние 30 дней)
+    const activePlayers = playersArray.filter(player => {
+        return Date.now() - player.lastActive < 30 * 24 * 60 * 60 * 1000;
+    });
+    
+    // Сортируем по totalEarned (общему заработку)
+    const sortedPlayers = activePlayers.sort((a, b) => b.totalEarned - a.totalEarned);
+    
+    // Ограничиваем топ 50 игроками
+    leaderboardData = sortedPlayers.slice(0, 50);
+    
+    // Отображаем топ
+    displayRealLeaderboard();
+    
+    // Обновляем ранг текущего игрока
+    updatePlayerRank();
+    
+    showNotification('🏆 Топ игроков обновлен!');
+}
+
+function displayRealLeaderboard() {
+    const leaderboardList = document.getElementById('leaderboard-list');
+    
+    if (leaderboardData.length === 0) {
+        leaderboardList.innerHTML = `
+            <div style="text-align: center; padding: 20px; color: #888;">
+                Пока нет игроков в топе.<br>
+                Станьте первым!
+            </div>
+        `;
+        return;
+    }
+    
+    leaderboardList.innerHTML = '';
+    
+    leaderboardData.slice(0, 20).forEach((player, index) => {
+        const rankClass = `rank rank-${index < 3 ? index + 1 : 'other'}`;
+        const isCurrentUser = player.id === getUserId();
+        const avatarLetter = player.username ? player.username[0].toUpperCase() : 'И';
+        
+        const item = document.createElement('div');
+        item.className = 'leaderboard-item';
+        item.innerHTML = `
+            <div class="${rankClass}">${index + 1}</div>
+            <div class="player-info">
+                <div class="player-name">
+                    ${player.username} 
+                    ${isCurrentUser ? '<span style="color: #f39c12;">(Вы)</span>' : ''}
+                    ${player.isAdmin ? ' <span style="color: #e74c3c; font-size: 10px;">[ADMIN]</span>' : ''}
+                </div>
+                <div style="font-size: 11px; color: #888;">
+                    Тапов: ${player.totalTaps ? player.totalTaps.toLocaleString() : '0'}
+                </div>
+            </div>
+            <div class="player-score">${player.totalEarned ? player.totalEarned.toLocaleString() : '0'}</div>
+            <div class="player-avatar">${avatarLetter}</div>
+        `;
+        leaderboardList.appendChild(item);
+    });
+    
+    // Если игроков больше 20, показываем сколько всего
+    if (leaderboardData.length > 20) {
+        const moreItem = document.createElement('div');
+        moreItem.style.textAlign = 'center';
+        moreItem.style.padding = '10px';
+        moreItem.style.color = '#888';
+        moreItem.style.fontSize = '12px';
+        moreItem.innerHTML = `... и еще ${leaderboardData.length - 20} игроков`;
+        leaderboardList.appendChild(moreItem);
+    }
+}
+
+function updatePlayerRank() {
+    const userId = getUserId();
+    const playerIndex = leaderboardData.findIndex(player => player.id === userId);
+    
+    if (playerIndex !== -1) {
+        document.getElementById('player-rank').textContent = `#${playerIndex + 1}`;
+    } else {
+        // Если игрок не в топе, показываем его приблизительное место
+        const allPlayersArray = Object.values(allPlayers);
+        const sortedAllPlayers = allPlayersArray.sort((a, b) => b.totalEarned - a.totalEarned);
+        const allPlayerIndex = sortedAllPlayers.findIndex(player => player.id === userId);
+        
+        if (allPlayerIndex !== -1) {
+            document.getElementById('player-rank').textContent = `#${allPlayerIndex + 1}`;
+        } else {
+            document.getElementById('player-rank').textContent = '#-';
+        }
+    }
+}
+
+// ===== ОСНОВНОЙ ОБЪЕКТ СОСТОЯНИЯ ИГРЫ =====
+function createDefaultState() {
+    return {
+        balance: 0,
+        energy: 1000,
+        maxEnergy: 1000,
+        clickValue: 1,
+        multitapCost: 100,
+        energyCost: 500,
+        autoclickerCost: 2000,
+        autoclickerLevel: 0,
+        version: "1.5",
+        totalTaps: 0,
+        totalEarned: 0,
+        sessionStart: Date.now(),
+        referrals: [],
+        referralCode: null,
+        dailyRewardLastClaim: 0,
+        dailyRewardStreak: 0,
+        isAdmin: false,
+        lastClickTime: 0,
+        lastSaveTime: 0,
+        purchases: {
+            multitap: 0,
+            energy: 0,
+            autoclicker: 0
+        },
+        skins: {
+            owned: ['classic'],
+            equipped: 'classic'
+        }
+    };
+}
+
+// ===== СИСТЕМА СОХРАНЕНИЯ =====
+function saveGame() {
+    if (!gameState) return;
+    
+    try {
+        gameState.lastSaveTime = Date.now();
+        const saveData = JSON.stringify(gameState);
+        localStorage.setItem('anatoly_coin_save', saveData);
+        
+        // Обновляем данные игрока в общем хранилище
+        updateCurrentPlayerData();
+        
+        console.log('Игра сохранена:', {
+            баланс: gameState.balance,
+            игрок: getUserName(),
+            время: new Date().toLocaleTimeString()
+        });
+        
+        return true;
+    } catch (error) {
+        console.error('Ошибка сохранения:', error);
+        showNotification('❌ Ошибка сохранения');
+        return false;
+    }
+}
+
+function loadGame() {
+    try {
+        const saved = localStorage.getItem('anatoly_coin_save');
+        
+        if (saved) {
+            const loadedState = JSON.parse(saved);
+            
+            if (loadedState.version === "1.5") {
+                gameState = loadedState;
+                console.log('Игра загружена из сохранения');
+                return true;
+            } else {
+                // Миграция со старой версии
+                gameState = createDefaultState();
+                if (loadedState.balance) gameState.balance = loadedState.balance;
+                if (loadedState.totalTaps) gameState.totalTaps = loadedState.totalTaps;
+                if (loadedState.totalEarned) gameState.totalEarned = loadedState.totalEarned;
+                if (loadedState.skins) gameState.skins = loadedState.skins;
+                console.log('Миграция с версии', loadedState.version);
+            }
+        } else {
+            gameState = createDefaultState();
+            console.log('Создано новое сохранение');
+        }
+        
+        return false;
+    } catch (error) {
+        console.error('Ошибка загрузки:', error);
+        gameState = createDefaultState();
+        showNotification('⚠️ Ошибка загрузки, создано новое сохранение');
+        return false;
+    }
+}
+
+function autoSave() {
+    if (!gameState || Date.now() - gameState.lastSaveTime < 1000) return;
+    saveGame();
+}
+
+// ===== ИНИЦИАЛИЗАЦИЯ ИГРЫ =====
+function initGame() {
+    if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+        console.log('Telegram WebApp инициализирован');
+    } else {
+        console.log('Режим тестирования (не в Telegram)');
+    }
+    
+    loadGame();
+    loadAllPlayers(); // Загружаем всех игроков
+    
+    if (!gameState.referralCode) {
+        gameState.referralCode = generateReferralCode();
+    }
+    
+    initDOM();
+    updateUI();
+    updateAdminBadge();
+    loadSkinsShop();
+    applySkin(gameState.skins.equipped);
+    
+    startGameProcesses();
+    
+    // Загружаем реальный топ при запуске
+    setTimeout(() => {
+        loadRealLeaderboard();
+        showNotification('Добро пожаловать в Anatoly Coin! 🎮');
+    }, 1000);
+}
+
+function initDOM() {
+    const coin = document.getElementById('coin');
+    
+    coin.addEventListener('click', handleCoinClick);
+    
+    coin.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        const rect = this.getBoundingClientRect();
+        const x = rect.left + rect.width / 2;
+        const y = rect.top + rect.height / 2;
+        handleTap(x, y);
+    }, { passive: false });
+    
+    document.getElementById('adminCodeInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            checkAdminCode();
+        }
+    });
+    
+    window.addEventListener('beforeunload', function(e) {
+        saveGame();
+        saveAllPlayers();
+    });
+    
+    setInterval(autoSave, 30000);
+    
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+            saveGame();
+            saveAllPlayers();
+        }
+    });
+}
+
+function startGameProcesses() {
+    setInterval(function() {
+        if (gameState && gameState.energy < gameState.maxEnergy) {
+            gameState.energy = Math.min(gameState.energy + 2, gameState.maxEnergy);
+            updateUI();
+        }
+    }, 1000);
+    
+    if (gameState.autoclickerLevel > 0) {
+        startAutoClicker();
+    }
+}
+
+// ===== СИСТЕМА СКИНОВ =====
+function loadSkinsShop() {
+    const skinsGrid = document.getElementById('skins-grid');
+    skinsGrid.innerHTML = '';
+    
+    skinsData.forEach(skin => {
+        const isOwned = gameState.skins.owned.includes(skin.id);
+        const isEquipped = gameState.skins.equipped === skin.id;
+        const canAfford = gameState.balance >= skin.price;
+        
+        const skinCard = document.createElement('div');
+        skinCard.className = `skin-card ${isEquipped ? 'equipped' : ''} ${!isOwned ? 'locked' : ''}`;
+        skinCard.onclick = () => handleSkinClick(skin.id);
+        
+        const skinStyle = isOwned ? 
+            `background: ${skin.color1}; border: 3px solid ${skin.borderColor};` :
+            `background: linear-gradient(45deg, #333, #555); border: 3px solid #666;`;
+        
+        const effectClass = isOwned && skin.effect !== 'none' ? `skin-effect-${skin.effect}` : '';
+        
+        skinCard.innerHTML = `
+            <div class="skin-preview ${effectClass}" style="${skinStyle}">
+                ${skin.letter}
+            </div>
+            <div class="skin-name">${skin.name}</div>
+            ${isOwned ? 
+                `<div class="skin-owned">${isEquipped ? 'Экипирован' : 'Куплен'}</div>` :
+                `<div class="skin-price" style="${canAfford ? 'color: #2ecc71' : 'color: #e74c3c'}">${skin.price.toLocaleString()} Анатолий</div>`
+            }
+            <div class="skin-bonus">+${skin.bonus}% к доходу</div>
+        `;
+        
+        skinsGrid.appendChild(skinCard);
+    });
+    
+    updateCurrentSkinInfo();
+}
+
+function updateCurrentSkinInfo() {
+    const currentSkin = skinsData.find(s => s.id === gameState.skins.equipped);
+    if (currentSkin) {
+        document.getElementById('current-skin-name').textContent = currentSkin.name;
+        document.getElementById('current-skin-bonus').textContent = `+${currentSkin.bonus}% к доходу`;
+    }
+}
+
+function handleSkinClick(skinId) {
+    const skin = skinsData.find(s => s.id === skinId);
+    
+    if (!skin) return;
+    
+    const isOwned = gameState.skins.owned.includes(skinId);
+    
+    if (!isOwned) {
+        if (gameState.balance >= skin.price) {
+            gameState.balance -= skin.price;
+            gameState.skins.owned.push(skinId);
+            gameState.skins.equipped = skinId;
+            
+            showNotification(`✅ Скин "${skin.name}" куплен и экипирован!`);
+            updateUI();
+            loadSkinsShop();
+            applySkin(skinId);
+            autoSave();
+        } else {
+            showNotification(`❌ Недостаточно монет для покупки "${skin.name}"!`);
+        }
+    } else {
+        gameState.skins.equipped = skinId;
+        showNotification(`✅ Скин "${skin.name}" экипирован!`);
+        loadSkinsShop();
+        applySkin(skinId);
+        autoSave();
+    }
+}
+
+function applySkin(skinId) {
+    const skin = skinsData.find(s => s.id === skinId);
+    if (!skin) return;
+    
+    const coin = document.getElementById('coin');
+    const coinEffect = document.getElementById('coin-effect');
+    const coinLetter = document.getElementById('coin-letter');
+    
+    coin.style.background = `radial-gradient(circle, ${skin.color1}, ${skin.color2})`;
+    coin.style.borderColor = skin.borderColor;
+    coinLetter.textContent = skin.letter;
+    
+    coinEffect.className = 'coin-effect';
+    if (skin.effect !== 'none') {
+        coinEffect.classList.add(`skin-effect-${skin.effect}`);
+        
+        if (skin.effect === 'rainbow') {
+            coinEffect.style.background = skin.color1;
+            coinEffect.style.backgroundSize = '400% 400%';
+        } else if (skin.effect === 'glow') {
+            coinEffect.style.boxShadow = `0 0 30px ${skin.borderColor}`;
+        }
+    }
+    
+    updateCurrentSkinInfo();
+}
+
+function getSkinBonus() {
+    const currentSkin = skinsData.find(s => s.id === gameState.skins.equipped);
+    return currentSkin ? currentSkin.bonus : 0;
+}
+
+function calculateClickValue() {
+    const baseValue = gameState.clickValue;
+    const skinBonus = getSkinBonus();
+    const bonusMultiplier = 1 + (skinBonus / 100);
+    return Math.floor(baseValue * bonusMultiplier);
+}
+
+// ===== ОСНОВНЫЕ ИГРОВЫЕ ФУНКЦИИ =====
+function handleCoinClick(e) {
+    const now = Date.now();
+    if (now - gameState.lastClickTime < 50) return;
+    gameState.lastClickTime = now;
+    
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = rect.left + rect.width / 2;
+    const y = rect.top + rect.height / 2;
+    handleTap(x, y);
+}
+
+function handleTap(x, y) {
+    if (gameState.energy >= gameState.clickValue) {
+        const actualClickValue = calculateClickValue();
+        
+        gameState.balance += actualClickValue;
+        gameState.energy -= gameState.clickValue;
+        gameState.totalTaps++;
+        gameState.totalEarned += actualClickValue;
+        
+        updateUI();
+        createTapAnimation(x, y, actualClickValue);
+        
+        if (gameState.totalTaps % 10 === 0) {
+            autoSave();
+        }
+        
+        updateTaskProgress();
+        
+        if (tg && tg.HapticFeedback) {
+            try {
+                tg.HapticFeedback.impactOccurred('light');
+            } catch (e) {}
+        }
+    } else {
+        createNoEnergyAnimation(x, y);
+    }
+}
+
+function createTapAnimation(x, y, value) {
+    const el = document.createElement('div');
+    el.className = 'tap-number';
+    el.innerText = `+${value}`;
+    el.style.left = `${x - 30}px`;
+    el.style.top = `${y - 30}px`;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 800);
+}
+
+function createNoEnergyAnimation(x, y) {
+    const el = document.createElement('div');
+    el.className = 'tap-number';
+    el.innerText = `⚡ Нет энергии!`;
+    el.style.color = '#e74c3c';
+    el.style.left = `${x - 50}px`;
+    el.style.top = `${y - 30}px`;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 800);
+}
+
+// ===== ФУНКЦИИ БУСТОВ =====
+function buyMultitap() {
+    if (gameState.balance >= gameState.multitapCost) {
+        gameState.balance -= gameState.multitapCost;
+        gameState.clickValue += 1;
+        gameState.multitapCost = Math.floor(gameState.multitapCost * 1.5);
+        gameState.purchases.multitap++;
+        
+        document.getElementById('multitap-price').innerText = gameState.multitapCost;
+        updateUI();
+        showNotification(`✅ Multitap куплен! Теперь вы получаете +${gameState.clickValue} за клик`);
+        autoSave();
+    } else {
+        showNotification('❌ Недостаточно монет!');
+    }
+}
+
+function buyEnergyLimit() {
+    if (gameState.balance >= gameState.energyCost) {
+        gameState.balance -= gameState.energyCost;
+        gameState.maxEnergy += 500;
+        gameState.energy = gameState.maxEnergy;
+        gameState.energyCost = Math.floor(gameState.energyCost * 1.8);
+        gameState.purchases.energy++;
+        
+        document.getElementById('energy-price').innerText = gameState.energyCost;
+        updateUI();
+        showNotification(`✅ Лимит энергии увеличен до ${gameState.maxEnergy}!`);
+        autoSave();
+    } else {
+        showNotification('❌ Недостаточно монет!');
+    }
+}
+
+function buyAutoClicker() {
+    if (gameState.balance >= gameState.autoclickerCost) {
+        gameState.balance -= gameState.autoclickerCost;
+        gameState.autoclickerLevel++;
+        gameState.autoclickerCost = Math.floor(gameState.autoclickerCost * 2);
+        gameState.purchases.autoclicker++;
+        
+        document.getElementById('autoclicker-price').innerText = gameState.autoclickerCost;
+        updateUI();
+        showNotification(`✅ Автокликер куплен! Уровень: ${gameState.autoclickerLevel}`);
+        autoSave();
+        
+        if (gameState.autoclickerLevel === 1) {
+            startAutoClicker();
+        }
+    } else {
+        showNotification('❌ Недостаточно монет!');
+    }
+}
+
+function startAutoClicker() {
+    setInterval(() => {
+        if (gameState.energy >= gameState.clickValue) {
+            const actualClickValue = calculateClickValue();
+            gameState.balance += actualClickValue;
+            gameState.energy -= gameState.clickValue;
+            gameState.totalEarned += actualClickValue;
+            updateUI();
+            
+            if (gameState.totalTaps % 50 === 0) {
+                autoSave();
+            }
+        }
+    }, 1000);
+}
+
+// ===== ФУНКЦИИ ЗАДАНИЙ =====
+function completeTask(reward, el, url) {
+    gameState.balance += reward;
+    gameState.totalEarned += reward;
+    updateUI();
+    
+    if (el) {
+        el.style.background = 'linear-gradient(45deg, #27ae60, #2ecc71)';
+        el.innerHTML = '<div style="color: white; font-weight: bold;">✅ Задание выполнено!</div>';
+        setTimeout(() => {
+            el.style.display = 'none';
+        }, 1000);
+    }
+    
+    if (url) {
+        window.open(url, '_blank');
+    }
+    
+    showNotification(`🎉 +${reward.toLocaleString()} монет!`);
+    autoSave();
+}
+
+function updateTaskProgress() {
+    const progress = document.getElementById('taps-progress');
+    if (progress) {
+        const tapsToday = gameState.totalTaps % 100;
+        progress.textContent = `Прогресс: ${tapsToday}/100`;
+        
+        if (tapsToday === 100) {
+            showNotification('✅ 100 тапов за день выполнено!');
+        }
+    }
+}
+
+// ===== АДМИН-ПАНЕЛЬ =====
+function showAdminCodeModal() {
+    document.getElementById('codeModal').classList.add('active');
+    document.getElementById('adminOverlay').classList.add('active');
+    setTimeout(() => {
+        document.getElementById('adminCodeInput').focus();
+    }, 100);
+}
+
+function checkAdminCode() {
+    const codeInput = document.getElementById('adminCodeInput');
+    const code = codeInput.value.trim();
+    
+    if (code === 'carapizzz1399' || code === 'admin123') {
+        gameState.isAdmin = true;
+        showNotification('✅ Админ-панель активирована!');
+        updateAdminBadge();
+        showAdminPanel();
+        autoSave();
+    } else {
+        showNotification('❌ Неверный код!');
+        codeInput.value = '';
+        codeInput.focus();
+    }
+}
+
+function updateAdminBadge() {
+    const currencyLabel = document.querySelector('.currency-label');
+    if (gameState.isAdmin) {
+        currencyLabel.innerHTML = 'ВАЛЮТА АНАТОЛИЙ <span class="admin-badge">ADMIN</span>';
+    } else {
+        currencyLabel.innerHTML = 'ВАЛЮТА АНАТОЛИЙ';
+    }
+}
+
+function showAdminPanel() {
+    closeAdminCodeModal();
+    document.getElementById('adminPanel').classList.add('active');
+    document.getElementById('adminOverlay').classList.add('active');
+    document.getElementById('currentBalanceAdmin').textContent = gameState.balance.toLocaleString();
+    
+    // Загружаем данные для админ-панели
+    loadPlayersForAdmin();
+    loadSkinsForAdmin();
+}
+
+function closeAdminCodeModal() {
+    document.getElementById('codeModal').classList.remove('active');
+    document.getElementById('adminOverlay').classList.remove('active');
+}
+
+function closeAdminPanel() {
+    document.getElementById('adminPanel').classList.remove('active');
+    document.getElementById('adminOverlay').classList.remove('active');
+}
+
+function showAdminTab(tabName) {
+    // Обновляем активные табы
+    document.querySelectorAll('.admin-tab').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.admin-tab-content').forEach(content => content.style.display = 'none');
+    
+    // Показываем выбранный таб
+    if (tabName === 'main') {
+        document.querySelector('.admin-tab:nth-child(1)').classList.add('active');
+        document.getElementById('admin-tab-main').style.display = 'block';
+    } else if (tabName === 'players') {
+        document.querySelector('.admin-tab:nth-child(2)').classList.add('active');
+        document.getElementById('admin-tab-players').style.display = 'block';
+        loadPlayersForAdmin();
+    } else if (tabName === 'skins') {
+        document.querySelector('.admin-tab:nth-child(3)').classList.add('active');
+        document.getElementById('admin-tab-skins').style.display = 'block';
+        loadSkinsForAdmin();
+    }
+}
+
+// ===== УПРАВЛЕНИЕ ИГРОКАМИ В АДМИН-ПАНЕЛИ =====
+function loadPlayersForAdmin() {
+    loadAllPlayers();
+    
+    const playersList = document.getElementById('players-list');
+    playersList.innerHTML = '';
+    
+    const playersArray = Object.values(allPlayers);
+    
+    // Сортируем по последней активности
+    const sortedPlayers = playersArray.sort((a, b) => b.lastActive - a.lastActive);
+    
+    sortedPlayers.forEach((player, index) => {
+        const playerItem = document.createElement('div');
+        playerItem.className = 'player-admin-item';
+        playerItem.innerHTML = `
+            <div class="player-admin-info">
+                <div class="player-admin-name">
+                    ${player.username || 'Без имени'}
+                    ${player.isAdmin ? ' <span style="color: #e74c3c; font-size: 10px;">[ADMIN]</span>' : ''}
+                </div>
+                <div class="player-admin-balance">
+                    Баланс: ${player.balance ? player.balance.toLocaleString() : '0'} монет
+                </div>
+                <div style="font-size: 10px; color: #888;">
+                    ID: ${player.id} | Тапов: ${player.totalTaps ? player.totalTaps.toLocaleString() : '0'}
+                </div>
+            </div>
+            <div class="player-admin-actions">
+                <button class="admin-action-btn" onclick="adminAddCoins('${player.id}', 1000)">+1к</button>
+                <button class="admin-action-btn" onclick="adminAddCoins('${player.id}', 10000)">+10к</button>
+                <button class="admin-action-btn" onclick="adminAddCoins('${player.id}', 100000)">+100к</button>
+                <button class="admin-action-btn" onclick="adminResetPlayer('${player.id}')" style="background: #e74c3c;">Сброс</button>
+            </div>
+        `;
+        playersList.appendChild(playerItem);
+    });
+    
+    // Обновляем статистику
+    updateAdminStats();
+}
+
+function searchPlayers() {
+    const searchTerm = document.getElementById('playerSearch').value.toLowerCase();
+    const playersList = document.getElementById('players-list');
+    const playersArray = Object.values(allPlayers);
+    
+    playersList.innerHTML = '';
+    
+    const filteredPlayers = playersArray.filter(player => {
+        const username = (player.username || '').toLowerCase();
+        const id = (player.id || '').toLowerCase();
+        return username.includes(searchTerm) || id.includes(searchTerm);
+    });
+    
+    filteredPlayers.forEach((player, index) => {
+        const playerItem = document.createElement('div');
+        playerItem.className = 'player-admin-item';
+        playerItem.innerHTML = `
+            <div class="player-admin-info">
+                <div class="player-admin-name">
+                    ${player.username || 'Без имени'}
+                    ${player.isAdmin ? ' <span style="color: #e74c3c; font-size: 10px;">[ADMIN]</span>' : ''}
+                </div>
+                <div class="player-admin-balance">
+                    Баланс: ${player.balance ? player.balance.toLocaleString() : '0'} монет
+                </div>
+                <div style="font-size: 10px; color: #888;">
+                    ID: ${player.id} | Тапов: ${player.totalTaps ? player.totalTaps.toLocaleString() : '0'}
+                </div>
+            </div>
+            <div class="player-admin-actions">
+                <button class="admin-action-btn" onclick="adminAddCoins('${player.id}', 1000)">+1к</button>
+                <button class="admin-action-btn" onclick="adminAddCoins('${player.id}', 10000)">+10к</button>
+                <button class="admin-action-btn" onclick="adminAddCoins('${player.id}', 100000)">+100к</button>
+                <button class="admin-action-btn" onclick="adminResetPlayer('${player.id}')" style="background: #e74c3c;">Сброс</button>
+            </div>
+        `;
+        playersList.appendChild(playerItem);
+    });
+}
+
+function updateAdminStats() {
+    const playersArray = Object.values(allPlayers);
+    const totalPlayers = playersArray.length;
+    const totalBalance = playersArray.reduce((sum, player) => sum + (player.balance || 0), 0);
+    
+    document.getElementById('total-players').textContent = totalPlayers;
+    document.getElementById('total-balance').textContent = totalBalance.toLocaleString();
+}
+
+function adminAddCoins(playerId, amount) {
+    if (!gameState.isAdmin) {
+        showNotification('❌ Нет прав администратора!');
+        return;
+    }
+    
+    if (!allPlayers[playerId]) {
+        showNotification('❌ Игрок не найден!');
+        return;
+    }
+    
+    // Обновляем баланс игрока
+    allPlayers[playerId].balance = (allPlayers[playerId].balance || 0) + amount;
+    allPlayers[playerId].totalEarned = (allPlayers[playerId].totalEarned || 0) + amount;
+    
+    // Если это текущий игрок, обновляем его состояние
+    if (playerId === getUserId()) {
+        gameState.balance += amount;
+        gameState.totalEarned += amount;
+        updateUI();
+    }
+    
+    // Сохраняем изменения
+    saveAllPlayers();
+    
+    // Обновляем список игроков
+    loadPlayersForAdmin();
+    
+    showNotification(`✅ Игроку ${allPlayers[playerId].username} добавлено ${amount.toLocaleString()} монет!`);
+}
+
+function adminResetPlayer(playerId) {
+    if (!gameState.isAdmin) {
+        showNotification('❌ Нет прав администратора!');
+        return;
+    }
+    
+    if (!allPlayers[playerId]) {
+        showNotification('❌ Игрок не найден!');
+        return;
+    }
+    
+    if (confirm(`Вы уверены, что хотите сбросить прогресс игрока ${allPlayers[playerId].username}?`)) {
+        // Сбрасываем прогресс игрока
+        allPlayers[playerId] = {
+            ...allPlayers[playerId],
+            balance: 0,
+            totalEarned: 0,
+            totalTaps: 0,
+            skins: {
+                owned: ['classic'],
+                equipped: 'classic'
+            },
+            isAdmin: playerId === getUserId() // Сохраняем админские права для себя
+        };
+        
+        // Если это текущий игрок, обновляем его состояние
+        if (playerId === getUserId()) {
+            gameState.balance = 0;
+            gameState.totalEarned = 0;
+            gameState.totalTaps = 0;
+            gameState.skins = {
+                owned: ['classic'],
+                equipped: 'classic'
+            };
+            updateUI();
+            loadSkinsShop();
+            applySkin('classic');
+        }
+        
+        // Сохраняем изменения
+        saveAllPlayers();
+        
+        // Обновляем список игроков
+        loadPlayersForAdmin();
+        
+        showNotification(`✅ Прогресс игрока ${allPlayers[playerId].username} сброшен!`);
+    }
+}
+
+function giveCoinsToPlayer() {
+    const playerId = document.getElementById('playerIdInput').value.trim();
+    const amount = parseInt(document.getElementById('playerCoinsAmount').value);
+    
+    if (!playerId) {
+        showNotification('❌ Введите ID игрока!');
+        return;
+    }
+    
+    if (isNaN(amount) || amount <= 0) {
+        showNotification('❌ Введите корректное количество монет!');
+        return;
+    }
+    
+    adminAddCoins(playerId, amount);
+    
+    // Очищаем поля
+    document.getElementById('playerIdInput').value = '';
+    document.getElementById('playerCoinsAmount').value = '';
+}
+
+// ===== УПРАВЛЕНИЕ СКИНАМИ В АДМИН-ПАНЕЛИ =====
+function loadSkinsForAdmin() {
+    const skinsGrid = document.getElementById('admin-skins-grid');
+    const skinSelect = document.getElementById('skinSelect');
+    
+    skinsGrid.innerHTML = '';
+    skinSelect.innerHTML = '<option value="">Выберите скин</option>';
+    
+    skinsData.forEach(skin => {
+        // Добавляем в сетку
+        const skinCard = document.createElement('div');
+        skinCard.className = 'skin-admin-card';
+        skinCard.onclick = () => selectSkinForAdmin(skin.id);
+        skinCard.innerHTML = `
+            <div class="skin-admin-preview" style="background: ${skin.color1}; border: 2px solid ${skin.borderColor};">
+                ${skin.letter}
+            </div>
+            <div style="font-size: 12px; font-weight: bold;">${skin.name}</div>
+            <div style="font-size: 10px; color: #888;">+${skin.bonus}%</div>
+        `;
+        skinsGrid.appendChild(skinCard);
+        
+        // Добавляем в выпадающий список
+        const option = document.createElement('option');
+        option.value = skin.id;
+        option.textContent = `${skin.name} (+${skin.bonus}%)`;
+        skinSelect.appendChild(option);
+    });
+}
+
+let selectedSkinForAdmin = null;
+
+function selectSkinForAdmin(skinId) {
+    selectedSkinForAdmin = skinId;
+    document.getElementById('skinSelect').value = skinId;
+    
+    // Подсвечиваем выбранный скин
+    document.querySelectorAll('.skin-admin-card').forEach(card => {
+        card.style.border = '2px solid transparent';
+    });
+    
+    const selectedCard = document.querySelector(`.skin-admin-card:nth-child(${skinsData.findIndex(s => s.id === skinId) + 1})`);
+    if (selectedCard) {
+        selectedCard.style.border = '2px solid var(--main-gold)';
+    }
+}
+
+function giveSkinToPlayer() {
+    const playerId = document.getElementById('skinPlayerId').value.trim();
+    const skinId = document.getElementById('skinSelect').value;
+    
+    if (!playerId) {
+        showNotification('❌ Введите ID игрока!');
+        return;
+    }
+    
+    if (!skinId) {
+        showNotification('❌ Выберите скин!');
+        return;
+    }
+    
+    if (!gameState.isAdmin) {
+        showNotification('❌ Нет прав администратора!');
+        return;
+    }
+    
+    if (!allPlayers[playerId]) {
+        showNotification('❌ Игрок не найден!');
+        return;
+    }
+    
+    const skin = skinsData.find(s => s.id === skinId);
+    if (!skin) {
+        showNotification('❌ Скин не найден!');
+        return;
+    }
+    
+    // Добавляем скин игроку
+    if (!allPlayers[playerId].skins) {
+        allPlayers[playerId].skins = {
+            owned: ['classic'],
+            equipped: 'classic'
+        };
+    }
+    
+    if (!allPlayers[playerId].skins.owned.includes(skinId)) {
+        allPlayers[playerId].skins.owned.push(skinId);
+    }
+    
+    // Если это текущий игрок, обновляем его состояние
+    if (playerId === getUserId()) {
+        if (!gameState.skins.owned.includes(skinId)) {
+            gameState.skins.owned.push(skinId);
+        }
+        loadSkinsShop();
+    }
+    
+    // Сохраняем изменения
+    saveAllPlayers();
+    
+    // Обновляем список игроков
+    loadPlayersForAdmin();
+    
+    showNotification(`✅ Игроку ${allPlayers[playerId].username} выдан скин "${skin.name}"!`);
+    
+    // Очищаем поля
+    document.getElementById('skinPlayerId').value = '';
+    document.getElementById('skinSelect').value = '';
+    selectedSkinForAdmin = null;
+}
+
+function unlockAllSkins() {
+    if (!gameState.isAdmin) {
+        showNotification('❌ Нет прав администратора!');
+        return;
+    }
+    
+    if (confirm('Разблокировать ВСЕ скины для себя? Это действие нельзя отменить.')) {
+        // Разблокируем все скины
+        gameState.skins.owned = skinsData.map(skin => skin.id);
+        
+        // Сохраняем изменения
+        autoSave();
+        
+        // Обновляем магазин
+        loadSkinsShop();
+        
+        // Обновляем данные в общем хранилище
+        updateCurrentPlayerData();
+        
+        showNotification('✅ Все скины разблокированы!');
+    }
+}
+
+function addAdminCoins() {
+    const amountInput = document.getElementById('adminCoinsAmount');
+    const amount = parseInt(amountInput.value);
+    
+    if (isNaN(amount) || amount <= 0) {
+        showNotification('❌ Введите корректное количество!');
+        return;
+    }
+    
+    gameState.balance += amount;
+    gameState.totalEarned += amount;
+    updateUI();
+    autoSave();
+    
+    amountInput.value = '';
+    document.getElementById('currentBalanceAdmin').textContent = gameState.balance.toLocaleString();
+    showNotification(`✅ Добавлено ${amount.toLocaleString()} монет!`);
+}
+
+function addCoins(amount) {
+    gameState.balance += amount;
+    gameState.totalEarned += amount;
+    updateUI();
+    autoSave();
+    
+    document.getElementById('adminCoinsAmount').value = '';
+    document.getElementById('currentBalanceAdmin').textContent = gameState.balance.toLocaleString();
+    showNotification(`✅ Добавлено ${amount.toLocaleString()} монет!`);
+}
+
+function resetEnergy() {
+    gameState.energy = gameState.maxEnergy;
+    updateUI();
+    autoSave();
+    showNotification('✅ Энергия восстановлена!');
+}
+
+function resetGame() {
+    if (confirm('ВНИМАНИЕ! Вы уверены, что хотите сбросить всю игру?\nВсе ваши монеты и прогресс будут удалены!')) {
+        gameState = createDefaultState();
+        gameState.referralCode = generateReferralCode();
+        gameState.isAdmin = true;
+        
+        updateUI();
+        loadSkinsShop();
+        applySkin('classic');
+        saveGame();
+        showNotification('🔄 Игра сброшена!');
+        closeAdminPanel();
+    }
+}
+
+// ===== РЕФЕРАЛЬНАЯ СИСТЕМА =====
+function generateReferralCode() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code = '';
+    for (let i = 0; i < 8; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
+}
+
+function copyReferralCode() {
+    const code = `https://t.me/share/url?url=Присоединяйся%20к%20Anatoly%20Coin!&text=Играй%20в%20Anatoly%20Coin!%20Используй%20мой%20код:%20${gameState.referralCode}%20для%20бонуса!`;
+    
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(code).then(() => {
+            showNotification('📋 Ссылка скопирована!');
+        }).catch(err => {
+            showNotification('❌ Ошибка копирования');
+        });
+    } else {
+        const textArea = document.createElement('textarea');
+        textArea.value = code;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        showNotification('📋 Ссылка скопирована!');
+    }
+}
+
+// ===== ЕЖЕДНЕВНЫЕ НАГРАДЫ =====
+function checkDailyReward() {
+    const now = Date.now();
+    const lastClaim = gameState.dailyRewardLastClaim;
+    const oneDay = 24 * 60 * 60 * 1000;
+    
+    const btn = document.getElementById('daily-reward-btn');
+    const timer = document.getElementById('reward-timer');
+    
+    if (now - lastClaim < oneDay) {
+        btn.disabled = true;
+        btn.textContent = 'Уже получено';
+        
+        const nextClaim = lastClaim + oneDay;
+        const timeLeft = nextClaim - now;
+        const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+        const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+        
+        timer.textContent = `Следующая награда через: ${hours}ч ${minutes}м`;
+    } else if (now - lastClaim > oneDay * 2) {
+        gameState.dailyRewardStreak = 0;
+    }
+    
+    btn.textContent = `Забрать (${gameState.dailyRewardStreak + 1} день)`;
+}
+
+function claimDailyReward() {
+    const reward = 1000 * (gameState.dailyRewardStreak + 1);
+    gameState.balance += reward;
+    gameState.dailyRewardLastClaim = Date.now();
+    gameState.dailyRewardStreak++;
+    
+    updateUI();
+    autoSave();
+    checkDailyReward();
+    showNotification(`🎁 Получено ${reward.toLocaleString()} монет! Серия: ${gameState.dailyRewardStreak} дней`);
+}
+
+// ===== ОБНОВЛЕНИЕ ИНТЕРФЕЙСА =====
+function updateUI() {
+    if (!gameState) return;
+    
+    document.getElementById('balance').innerText = gameState.balance.toLocaleString();
+    
+    const energyPerc = (gameState.energy / gameState.maxEnergy) * 100;
+    document.getElementById('energy-fill').style.width = `${energyPerc}%`;
+    document.getElementById('energy-text').innerText = `${Math.floor(gameState.energy)} / ${gameState.maxEnergy}`;
+    
+    const energyFill = document.getElementById('energy-fill');
+    if (gameState.energy < gameState.maxEnergy * 0.3) {
+        energyFill.style.background = 'linear-gradient(90deg, #e74c3c, #c0392b)';
+    } else if (gameState.energy < gameState.maxEnergy * 0.6) {
+        energyFill.style.background = 'linear-gradient(90deg, #f39c12, #e67e22)';
+    } else {
+        energyFill.style.background = 'linear-gradient(90deg, #2ecc71, #27ae60)';
+    }
+    
+    document.getElementById('multitap-price').innerText = gameState.multitapCost;
+    document.getElementById('energy-price').innerText = gameState.energyCost;
+    document.getElementById('autoclicker-price').innerText = gameState.autoclickerCost;
+    
+    updateStats();
+}
+
+function updateStats() {
+    document.getElementById('referral-code').textContent = `Код: ${gameState.referralCode}`;
+    document.getElementById('referral-count').textContent = gameState.referrals.length;
+    document.getElementById('total-taps').textContent = gameState.totalTaps.toLocaleString();
+    document.getElementById('total-boosts').textContent = (gameState.purchases.multitap + gameState.purchases.energy + gameState.purchases.autoclicker).toLocaleString();
+    document.getElementById('session-earned').textContent = calculateSessionEarned().toLocaleString();
+}
+
+function calculateSessionEarned() {
+    return Math.floor((Date.now() - gameState.sessionStart) / 1000) * 10 + gameState.totalEarned;
+}
+
+// ===== УВЕДОМЛЕНИЯ =====
+function showNotification(text) {
+    const existing = document.querySelector('.save-notification');
+    if (existing) existing.remove();
+    
+    const notification = document.createElement('div');
+    notification.className = 'save-notification';
+    notification.innerHTML = text;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 2000);
+}
+
+// ===== ПЕРЕКЛЮЧЕНИЕ ЭКРАНОВ И ТАБОВ =====
+function showScreen(screenId, btn) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(screenId).classList.add('active');
+    
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active-nav'));
+    btn.classList.add('active-nav');
+    
+    if (screenId === 'top-screen') {
+        loadRealLeaderboard();
+        checkDailyReward();
+    } else if (screenId === 'boosts-screen') {
+        loadSkinsShop();
+    }
+}
+
+function showShopTab(tabName) {
+    document.querySelectorAll('.shop-tab').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.shop-tab-content').forEach(content => content.style.display = 'none');
+    
+    if (tabName === 'boosts') {
+        document.querySelector('.shop-tab:nth-child(1)').classList.add('active');
+        document.getElementById('boosts-tab').style.display = 'block';
+    } else if (tabName === 'skins') {
+        document.querySelector('.shop-tab:nth-child(2)').classList.add('active');
+        document.getElementById('skins-tab').style.display = 'block';
+        loadSkinsShop();
+    }
+}
+
+// ===== УПРАВЛЕНИЕ С КЛАВИАТУРЫ =====
+document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === 'A') {
+        e.preventDefault();
+        showAdminCodeModal();
+    }
+    
+    if (e.code === 'Space') {
+        e.preventDefault();
+        const coin = document.getElementById('coin');
+        const rect = coin.getBoundingClientRect();
+        const x = rect.left + rect.width / 2;
+        const y = rect.top + rect.height / 2;
+        handleTap(x, y);
+    }
+});
+
+// ===== ЗАПУСК ИГРЫ =====
+document.addEventListener('DOMContentLoaded', function() {
+    initGame();
+});
+
+window.addEventListener('load', function() {
+    console.log('Anatoly Coin загружен! Реальная система топа включена.');
+});
+</script>
+</body>
+</html>
